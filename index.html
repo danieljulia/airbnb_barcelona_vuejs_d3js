@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Airbnb in Barcelona</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.6.0/papaparse.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.7.0/d3.min.js"></script>
+
+</head>
+<body>
+  <div id="app">
+
+
+    <div class="columns">
+        <div class="column">
+          <svg id="mapa">
+
+          </svg>
+
+        </div>
+      <div class="column">
+
+
+    <table>
+
+      <tr>
+        <th >
+          {{data[0][0]}}
+        </th>
+        <th >
+          {{data[0][1]}}
+        </th>
+        <th >
+          {{data[0][9]}}
+        </th>
+      </tr>
+
+    <tr :key="d.id" v-for="d in data.slice(1, 100)">
+
+      <td>
+        {{d[0]}}
+      </td>
+      <td>
+        {{d[1]}}
+      </td>
+      <td>
+        {{d[9]}}€
+      </td>
+    </tr>
+
+    </table>
+    </div>
+  </div>
+      </div>
+
+  <script>
+    var app = new Vue({
+      el: '#app',
+      data: {
+        data:[[]],
+        dist:[0,0,0,0,0,0,0,0,0,0,0,0]
+      },
+      methods: {
+        humanizeURL: function (url) {
+          return url
+            .replace(/^https?:\/\//, '')
+            .replace(/\/$/, '')
+        },
+        load:function(){
+          let that=this;
+          var res=[];
+
+          Papa.parse("listings.csv", {
+          	download: true,
+          	step: function(row) {
+          		//console.log("Row:", row.data);
+              res.push(row.data[0]);
+          	},
+          	complete: function() {
+              res.shift();
+              //res.splice(100, 20000);
+
+              that.data=res;
+              that.make_dist();
+          		console.log("All done!",that.data);
+              d3view(that.data);
+          	}
+          });
+
+
+
+        },make_dist:function(){
+          var cuts=[20,40,60,80,100,120,140,200,400,600,800,1000];
+          for(var i=0;i<this.data.length;i++){
+            if(i<100) console.log(this.data[i][9]);
+            if(this.data[i][9]<=cuts[0]){
+              this.dist[0]++;
+              console.log("ok");
+            }
+            for(var j=1;j<11;j++){
+              if( this.data[i][9]<=cuts[j+1] && this.data[i][9]>cuts[j]){
+                this.dist[j]++;
+              }
+            }
+            if(this.data[i][9]>cuts[11]){
+              this.dist[11]++;
+            }
+          }
+          console.log("dist",this.dist);
+        }
+      },
+
+      mounted(){
+          this.load();
+
+      }
+    })
+
+    function d3view(data){
+      var width = 950,
+    height = 950;
+    var bcn={lat:41.386915,lng:2.170139};
+    var scale=10000;
+            // create svg variable
+         var svg = d3.select("svg")
+                 .attr("width", width)
+                 .attr("height", height);
+      // add circles to svg
+          svg.selectAll("circle")
+      		.data(data).enter()
+      		.append("circle")
+      		.attr("cx", function (d) { return (d[7]-bcn.lng)*scale+width/2  })
+      		.attr("cy", function (d) { return (bcn.lat-d[6])*scale+height/2   })
+      		.attr("r", function (d) {
+            var size=d[9]/100;
+            if(size<1) return 1;
+            if(size>6) return 6;
+            return parseInt(size);
+         })
+         .on("mouseover", function(d){
+           console.log("over aquest",d);
+         })
+      		.attr("fill", "rgba(255,0,0,0.7)")
+    }
+  </script>
+</body>
+</html>
